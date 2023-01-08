@@ -1,5 +1,4 @@
 import os
-from exceptions import ImproperlyConfigured
 
 from dotenv import load_dotenv
 
