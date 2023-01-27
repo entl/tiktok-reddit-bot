@@ -20,7 +20,7 @@ TLD = 'ca'
 AUDIO_FOLDER = 'audio/'
 
 #Database credentials
-DATABASE_ID=os.getenv('DATABASE_ID')
+DATABASE_USER=os.getenv('DATABASE_USER')
 DATABASE_PWD=os.getenv('DATABASE_PWD')
 DATABASE_LOCATION=os.getenv('DATABASE_LOCATION')
 DATABASE_NAME=os.getenv('DATABASE_NAME')
