@@ -1,12 +1,9 @@
-from gtts import gTTS
-from settings import TLD, LANG, AUDIO_FOLDER
+from settings import AUDIO_FOLDER
 import os
+from TTS.api import TTS
 
 def syntesize(text:str, filename:str):
+    # Init TTS with the target model name
     filename = f'{filename}.mp3'
-    tts = gTTS(text, lang=LANG, tld=TLD)
-    tts.save(os.path.join(AUDIO_FOLDER, filename))
-    return filename
-
-if __name__ == "__main__":
-    syntesize('hello world', 'test')
+    tts = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC", progress_bar=False, gpu=False)
+    tts.tts_to_file(text=text, file_path=os.path.join(AUDIO_FOLDER, filename))

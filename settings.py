@@ -12,10 +12,6 @@ USER_AGENT = os.getenv('USER_AGENT')
 ASKREDDIT = 'askReddit'
 TRUEOFFMYCHEST = 'TrueOffMyChest'
 
-#Parameters for text-to-speech
-LANG = 'en'
-TLD = 'ca'
-
 #Path to folder with MP3
 AUDIO_FOLDER = 'audio/'
 

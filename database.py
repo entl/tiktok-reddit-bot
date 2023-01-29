@@ -1,14 +1,64 @@
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, and_
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from settings import DATABASE_USER, DATABASE_PWD, DATABASE_LOCATION, DATABASE_NAME
-from exceptions import CantAddRecord, RecordNotExists
+from exceptions import CantAddRecord, RecordNotExists, CantUpdateRecord
 
 Base = declarative_base()
 
 
-class TrueOffMyChest(Base):
+class SubmissionMixin(object):
+    @classmethod
+    def get_submission(cls, session, submission_id: str):
+        return session.query(cls).filter(cls.submission_id == submission_id).one()
+
+    @classmethod
+    def set_uploaded(cls, session, submission_id: str):
+        try:
+            submission = session.query(cls).filter(
+                cls.submission_id == submission_id).one()
+            submission.is_uploaded = True
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise CantUpdateRecord(e)
+
+
+class CommentMixin(object):
+    @classmethod
+    def add_comments(cls, session, comments: list) -> None:
+        submission_id = comments[0]['submission_id']
+
+        with session as session:
+            try:
+                existing_submission = session.query(AskReddit).filter(
+                    AskReddit.submission_id == submission_id).first()
+                if existing_submission is None:
+                    raise RecordNotExists
+                session.bulk_insert_mappings(Comment, comments)
+                session.commit()
+            except Exception as e:
+                session.rollback()
+                raise CantAddRecord(e)
+
+    @classmethod
+    def get_comments(cls, session, submission_id: str):
+        return session.query(Comment).filter(Comment.submission_id == submission_id).all()
+
+    @classmethod
+    def set_uploaded(cls, session, submission_id: str, id: int):
+        try:
+            submission = session.query(cls).filter(
+                and_(cls.submission_id == submission_id, cls.id == id)).one()
+            submission.is_uploaded = True
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise CantUpdateRecord(e)
+
+
+class TrueOffMyChest(Base, SubmissionMixin):
     __tablename__ = 'trueOffMyChest'
     __table_args__ = {'schema': 'reddit'}
 
@@ -18,12 +68,29 @@ class TrueOffMyChest(Base):
     content = Column(Text)
     is_uploaded = Column(Boolean, default=False)
 
-    # def __repr__(self) -> str:
-    #     return f"""<Submission id: {self.submission_id}, Author: {self.author}, 
-    #                 Title: {self.title}>, Text: {self.content[:100]}..."""
+    @classmethod
+    def add_submission(cls, session, submission_id: str, title: str, content: str) -> None:
+        with session as session:
+            try:
+                existing_submission = session.query(TrueOffMyChest).filter(
+                    TrueOffMyChest.submission_id == submission_id).first()
+                if existing_submission is not None:
+                    print("Already in database")
+                    return
+                submission = TrueOffMyChest(
+                    submission_id=submission_id, title=title, content=content)
+                session.add(submission)
+                session.commit()
+            except Exception as e:
+                session.rollback()
+                raise CantAddRecord(e)
+
+    def __repr__(self) -> str:
+        return f"""<Submission id: {self.submission_id}, Author: {self.author}, 
+                    Title: {self.title}>, Text: {self.content[:100]}..."""
 
 
-class AskReddit(Base):
+class AskReddit(Base, SubmissionMixin):
     __tablename__ = 'askReddit'
     __table_args__ = {'schema': 'reddit'}
 
@@ -33,11 +100,28 @@ class AskReddit(Base):
     # TODO: Is uploaded should change to true only when all comments uploaded
     is_uploaded = Column(Boolean, default=False)
 
+    @classmethod
+    def add_submission(cls, session, submission_id: str, title: str) -> None:
+        with session as session:
+            try:
+                existing_submission = session.query(AskReddit).filter(
+                    AskReddit.submission_id == submission_id).first()
+                if existing_submission is not None:
+                    print("Already in database")
+                    return
+                submission = AskReddit(
+                    submission_id=submission_id, title=title)
+                session.add(submission)
+                session.commit()
+            except Exception as e:
+                session.rollback()
+                raise CantAddRecord(e)
+
     def __repr__(self) -> str:
         return f"<Submission id: {self.submission_id}, Author: {self.author}, Title: {self.title}>"
 
 
-class Comment(Base):
+class Comment(Base, CommentMixin):
     __tablename__ = 'comments'
     __table_args__ = {'schema': 'reddit'}
 
@@ -65,80 +149,3 @@ def make_connection():
 def make_session(engine):
     session = sessionmaker(bind=engine)
     return session()
-
-
-def add_submission_TrueOffMyChest(session, submission_id: str, title: str, content: str) -> None:
-    with session as session:
-        try:
-            existing_submission = session.query(TrueOffMyChest).filter(
-                TrueOffMyChest.submission_id == submission_id).first()
-            if existing_submission is not None:
-                print("Already in database")
-                return
-            submission = TrueOffMyChest(
-                submission_id=submission_id, title=title, content=content)
-            session.add(submission)
-            session.commit()
-        except:
-            session.rollback()
-            raise CantAddRecord
-
-
-def add_submission_askReddit(session, submission_id: str, title: str) -> None:
-    with session as session:
-        try:
-            existing_submission = session.query(AskReddit).filter(
-                AskReddit.submission_id == submission_id).first()
-            if existing_submission is not None:
-                print("Already in database")
-                return
-            submission = AskReddit(submission_id=submission_id, title=title)
-            session.add(submission)
-            session.commit()
-        except:
-            session.rollback()
-            raise CantAddRecord
-
-
-def add_comments_askReddit(session, comments: list) -> None:
-    submission_id = comments[0]['submission_id']
-
-    with session as session:
-        try:
-            existing_submission = session.query(AskReddit).filter(
-                AskReddit.submission_id == submission_id).first()
-            if existing_submission is None:
-                raise RecordNotExists
-            session.bulk_insert_mappings(Comment, comments)
-            session.commit()
-        except:
-            session.rollback()
-            raise CantAddRecord
-
-
-def get_TrueOffMyChest(session, submission_id: str):
-    return session.query(TrueOffMyChest).filter(TrueOffMyChest.submission_id == submission_id).first()
-
-
-def get_askReddit(session, submission_id: str):
-    return session.query(AskReddit).filter(AskReddit.submission_id == submission_id).first()
-
-
-def get_comments(session, submission_id: str):
-    return session.query(Comment).filter(Comment.submission_id == submission_id).all()
-
-if __name__ == "__main__":
-    engine = make_connection()
-    session = make_session(engine)
-    # add_submission_TrueOffMyChest(session, "2asf2", "testTitle22", "contentTes2t")
-    # print(get_TrueOffMyChest(session, "2asf2"))
-    
-    # print(get_askReddit(session, '10kzboh').submission_id)
-    # comments = get_comments(session, '10kzboh')
-    # for comment in comments:
-    #     print(comment.submission.title)
-    
-    # add_submission_askReddit(session=session, submission_id="10kzboh", title="testTitle2")
-    # add_comments_askReddit(session, [{'submission_id': '10kzboh', 'author': 'Poorly-Drawn-Beagle', 'content': 'Thanks for being there for 15 years so we could have our questions about that guy’s wife answered'},
-    #                         {'submission_id': '10kzboh','author': 'CaptinDerpI', 'content': 'Happy Birthday to the place where I find myself wondering what the fuck is wrong with people'},
-    #                         {'submission_id': '10kzboh', 'author': 're_Claire', 'content': 'So much. So much is wrong.'}])
