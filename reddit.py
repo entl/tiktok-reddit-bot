@@ -1,43 +1,126 @@
+import json
+import os
 import praw
 from prawcore.exceptions import ResponseException
+from playwright.sync_api import sync_playwright
 from settings import CLIENT_ID, CLIENT_SECRET, USER_AGENT
 from settings import TRUEOFFMYCHEST, ASKREDDIT
+from settings import SCREENSHOT_FOLDER_ASKREDDIT, SCREENSHOT_FOLDER_TRUEOFFMYCHEST
 from exceptions import CantLoginReddit
-from typing import TypeAlias
+from typing import NewType
 
-reddit: TypeAlias = praw.Reddit
+reddit: NewType = praw.Reddit
 
+class Reddit:
 
-def login(client_id=CLIENT_ID, client_secret=CLIENT_SECRET, user_agent=USER_AGENT) -> reddit:
-    reddit = praw.Reddit(
-        client_id=client_id,
-        client_secret=client_secret,
-        user_agent=user_agent,
-    )
-    try:
-        # used to verify whether login is successfull
-        list(reddit.subreddit('test').hot(limit=1))[0]
-        return reddit
-    except ResponseException as e:
-        raise CantLoginReddit
+    reddit_object = None
+    cookies = None
 
+    def __init__(self, client_id, client_secret, user_agent) -> None:
+        if Reddit.reddit_object is None:
+            Reddit.reddit_object = self._login(client_id=client_id, client_secret=client_secret, user_agent=user_agent)
+        if Reddit.cookies is None:
+            Reddit.cookies = self._get_cookies("cookies.json")
+        self.submissions = None
 
-# get most popular subreddits in given time period up to limit
-def get_submissions(reddit: reddit, subreddit: str, limit: int = 1) -> list:
-    # TODO: Check whether post already in database
-    return reddit.subreddit(subreddit).top(time_filter = "day", limit=limit)
+    def _login(self, client_id=CLIENT_ID, client_secret=CLIENT_SECRET, user_agent=USER_AGENT) -> reddit:
+        reddit = praw.Reddit(
+            client_id=client_id,
+            client_secret=client_secret,
+            user_agent=user_agent,
+        )
+        try:
+            # used to verify whether login is successfull
+            list(reddit.subreddit('test').hot(limit=1))[0]
+            return reddit
+        except ResponseException as e:
+            raise CantLoginReddit
 
+    # get most popular subreddits in given time period up to limit
+    def get_submissions(self, subreddit: str, limit: int = 5) -> list:
+        # TODO: Check whether post already in database
+        self.submissions = list(self.reddit_object.subreddit(subreddit).top(time_filter = "day", limit=limit))
 
-def get_comments(reddit: reddit, submission_id: str, limit: int = 10) -> list:
-    submission = reddit.submission(id=submission_id)
-    submission.comment_limit = limit
-    submission.comment_sort = "best"
-    submission.comments.replace_more(limit = 0)
-    comments = submission.comments
-    return comments
+    @staticmethod
+    def get_submission_id(submission):
+        return submission.id
 
+    @staticmethod
+    def get_title(submission):
+        return submission.title
 
-# get text of the submission usualy is used for subreddit "TrueOffMyChest"
-def get_content(reddit: reddit, submission_id: str):
-    submission = reddit.submission(id=submission_id)
-    return submission.selftext
+    @staticmethod
+    def get_content(submission):
+        return submission.selftext
+    
+    @staticmethod
+    def get_comments(submission, limit: int = 10) -> list:
+        # self.submission = self.reddit_object.submission(id=submission_id)
+        submission.comment_limit = limit
+        submission.comment_sort = "best"
+        submission.comments.replace_more(limit = 0)
+        comments = submission.comments
+        return comments
+    
+    #!SCREENSHOT
+    @classmethod
+    def get_screenshot_title(cls, submission: str, path: str):
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            context = browser.new_context(
+                locale="en-us",
+                color_scheme="dark",
+            )
+            context.add_cookies(cls.cookies)
+            
+            page = context.new_page()
+
+            new_folder = os.path.join(path, submission.id)
+            if not os.path.exists(new_folder):
+                os.mkdir(os.path.join(path, submission.id))
+
+            print(submission.permalink)
+            page.goto(f"https://www.reddit.com{submission.permalink}")
+            page.locator(f'[data-testid="post-container"]').screenshot(path=os.path.join(new_folder, f"{submission.id}.png"))
+
+            browser.close()
+
+    @classmethod
+    def get_screenshot_comments(cls, submission_id: str, comments: list, path: str):
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            context = browser.new_context(
+                locale="en-us",
+                color_scheme="dark",
+            )
+            context.add_cookies(cls.cookies)
+            
+            page = context.new_page()
+
+            new_folder = os.path.join(path, submission_id)
+            if not os.path.exists(new_folder):
+                os.mkdir(os.path.join(path, submission_id))
+
+            for comment in comments:
+                print(comment.permalink)
+                page.goto(f"https://www.reddit.com{comment.permalink}")
+                page.locator(f".t1_{comment.id}", has_text=comment.body[:20]).screenshot(path=os.path.join(new_folder, f"{comment.id}.png"))
+
+            browser.close()
+
+    @classmethod
+    def _get_cookies(cls, file: str):
+        with open(file, "r") as cookie_file:
+            cookies = json.load(cookie_file)
+        return cookies
+
+if __name__ == "__main__":
+    reddit = Reddit(CLIENT_ID, CLIENT_SECRET, USER_AGENT)
+    reddit.get_submissions(ASKREDDIT, 1)
+    # print(reddit.submissions)
+    for submission in reddit.submissions:
+        # print(reddit.get_title(submission))
+        comments = reddit.get_comments(submission, limit = 3)
+        reddit.get_screenshot_title(submission, SCREENSHOT_FOLDER_ASKREDDIT)
+        reddit.get_screenshot_comments(submission.id, comments, SCREENSHOT_FOLDER_ASKREDDIT)
+    # print(reddit.get_content("10ocnjl"))
