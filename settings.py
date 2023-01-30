@@ -12,8 +12,20 @@ USER_AGENT = os.getenv('USER_AGENT')
 ASKREDDIT = 'askReddit'
 TRUEOFFMYCHEST = 'TrueOffMyChest'
 
+#Path to folder with gameplay (background video)
+GAMEPLAY_FOLDER = 'gameplay'
+
 #Path to folder with MP3
-AUDIO_FOLDER = 'audio/'
+AUDIO_FOLDER_ASKREDDIT = 'audio/AskReddit'
+AUDIO_FOLDER_TRUEOFFMYCHEST = 'audio/TrueOffMyChest'
+
+#Path to folder with ready videos 
+VIDEO_FOLDER_ASKREDDIT = 'video/AskReddit'
+VIDEO_FOLDER_TRUEOFFMYCHEST = "video/TrueOffMyChest"
+
+#Path to folder with screenshots
+SCREENSHOT_FOLDER_ASKREDDIT = 'screenshots/AskReddit'
+SCREENSHOT_FOLDER_TRUEOFFMYCHEST = 'screenshots/TrueOffMyChest'
 
 #Database credentials
 DATABASE_USER=os.getenv('DATABASE_USER')
