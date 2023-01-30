@@ -67,6 +67,7 @@ class TrueOffMyChest(Base, SubmissionMixin):
     title = Column(String(255))
     content = Column(Text)
     is_uploaded = Column(Boolean, default=False)
+    audio_file = Column(String(255), default=None)
 
     @classmethod
     def add_submission(cls, session, submission_id: str, title: str, content: str) -> None:
@@ -125,12 +126,14 @@ class Comment(Base, CommentMixin):
     __tablename__ = 'comments'
     __table_args__ = {'schema': 'reddit'}
 
-    id = Column(Integer, primary_key=True)
+    #!WONT WORK changed id -> comment_id drop database
+    comment_id = Column(Integer, primary_key=True)
     submission_id = Column(String(255), ForeignKey(
         'reddit.askReddit.submission_id'))
     author = Column(String(255))
     content = Column(Text)
     is_uploaded = Column(Boolean, default=False)
+    audio_file = Column(String(255), default=None)
 
     submission = relationship("AskReddit")
 
