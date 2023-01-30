@@ -62,9 +62,8 @@ class Reddit:
         comments = submission.comments
         return comments
     
-    #!SCREENSHOT
     @classmethod
-    def get_screenshot_title(cls, submission: str, path: str):
+    def get_screenshot_title(cls, submission, path: str):
         with sync_playwright() as p:
             browser = p.chromium.launch()
             context = browser.new_context(
@@ -81,12 +80,12 @@ class Reddit:
 
             print(submission.permalink)
             page.goto(f"https://www.reddit.com{submission.permalink}")
-            page.locator(f'[data-testid="post-container"]').screenshot(path=os.path.join(new_folder, f"{submission.id}.png"))
+            page.locator(f'[data-testid="post-container"]').screenshot(path=os.path.join(new_folder, f"title_{submission.id}.png"))
 
             browser.close()
 
     @classmethod
-    def get_screenshot_comments(cls, submission_id: str, comments: list, path: str):
+    def get_screenshot_comments(cls, submission, comments: list, path: str):
         with sync_playwright() as p:
             browser = p.chromium.launch()
             context = browser.new_context(
@@ -97,30 +96,20 @@ class Reddit:
             
             page = context.new_page()
 
-            new_folder = os.path.join(path, submission_id)
+            new_folder = os.path.join(path, submission.id)
             if not os.path.exists(new_folder):
-                os.mkdir(os.path.join(path, submission_id))
+                os.mkdir(os.path.join(path, submission.id))
 
             for comment in comments:
                 print(comment.permalink)
                 page.goto(f"https://www.reddit.com{comment.permalink}")
-                page.locator(f".t1_{comment.id}", has_text=comment.body[:20]).screenshot(path=os.path.join(new_folder, f"{comment.id}.png"))
+                page.locator(f".t1_{comment.id}", has_text=comment.body[:20]).screenshot(path=os.path.join(new_folder, f"comment_{comment.id}.png"))
 
             browser.close()
-
+    
     @classmethod
     def _get_cookies(cls, file: str):
         with open(file, "r") as cookie_file:
             cookies = json.load(cookie_file)
         return cookies
 
-if __name__ == "__main__":
-    reddit = Reddit(CLIENT_ID, CLIENT_SECRET, USER_AGENT)
-    reddit.get_submissions(ASKREDDIT, 1)
-    # print(reddit.submissions)
-    for submission in reddit.submissions:
-        # print(reddit.get_title(submission))
-        comments = reddit.get_comments(submission, limit = 3)
-        reddit.get_screenshot_title(submission, SCREENSHOT_FOLDER_ASKREDDIT)
-        reddit.get_screenshot_comments(submission.id, comments, SCREENSHOT_FOLDER_ASKREDDIT)
-    # print(reddit.get_content("10ocnjl"))
