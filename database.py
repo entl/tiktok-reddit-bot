@@ -22,10 +22,17 @@ class SubmissionMixin(object):
             session.commit()
         except Exception as e:
             session.rollback()
-            raise CantUpdateRecord(e)
+            raise CantUpdateRecord()
 
 
 class CommentMixin(object):
+    @staticmethod
+    def format_comments(comments):
+        comments_formatted = []
+        for comment in comments:
+            comments_formatted.append({"submission_id": comment.submission.id, "comment_id":comment.id, "author": comment.author.name, "content": comment.body})
+        return comments_formatted
+
     @classmethod
     def add_comments(cls, session, comments: list) -> None:
         submission_id = comments[0]['submission_id']
@@ -44,7 +51,7 @@ class CommentMixin(object):
 
     @classmethod
     def get_comments(cls, session, submission_id: str):
-        return session.query(Comment).filter(Comment.submission_id == submission_id).all()
+        return session.query(cls).filter(cls.submission_id == submission_id).all()
 
     @classmethod
     def set_uploaded(cls, session, submission_id: str, id: int):
@@ -55,7 +62,7 @@ class CommentMixin(object):
             session.commit()
         except Exception as e:
             session.rollback()
-            raise CantUpdateRecord(e)
+            raise CantUpdateRecord()
 
 
 class TrueOffMyChest(Base, SubmissionMixin):
@@ -67,10 +74,9 @@ class TrueOffMyChest(Base, SubmissionMixin):
     title = Column(String(255))
     content = Column(Text)
     is_uploaded = Column(Boolean, default=False)
-    audio_file = Column(String(255), default=None)
 
     @classmethod
-    def add_submission(cls, session, submission_id: str, title: str, content: str) -> None:
+    def add_submission(cls, session, submission_id: str, author: str, title: str, content: str) -> None:
         with session as session:
             try:
                 existing_submission = session.query(TrueOffMyChest).filter(
@@ -79,12 +85,12 @@ class TrueOffMyChest(Base, SubmissionMixin):
                     print("Already in database")
                     return
                 submission = TrueOffMyChest(
-                    submission_id=submission_id, title=title, content=content)
+                    submission_id=submission_id, author=author, title=title, content=content)
                 session.add(submission)
                 session.commit()
             except Exception as e:
                 session.rollback()
-                raise CantAddRecord(e)
+                raise CantAddRecord()
 
     def __repr__(self) -> str:
         return f"""<Submission id: {self.submission_id}, Author: {self.author}, 
@@ -102,7 +108,7 @@ class AskReddit(Base, SubmissionMixin):
     is_uploaded = Column(Boolean, default=False)
 
     @classmethod
-    def add_submission(cls, session, submission_id: str, title: str) -> None:
+    def add_submission(cls, session, submission_id: str, author: str, title: str) -> None:
         with session as session:
             try:
                 existing_submission = session.query(AskReddit).filter(
@@ -111,12 +117,12 @@ class AskReddit(Base, SubmissionMixin):
                     print("Already in database")
                     return
                 submission = AskReddit(
-                    submission_id=submission_id, title=title)
+                    submission_id=submission_id, author=author, title=title)
                 session.add(submission)
                 session.commit()
             except Exception as e:
                 session.rollback()
-                raise CantAddRecord(e)
+                raise CantAddRecord()
 
     def __repr__(self) -> str:
         return f"<Submission id: {self.submission_id}, Author: {self.author}, Title: {self.title}>"
@@ -126,14 +132,12 @@ class Comment(Base, CommentMixin):
     __tablename__ = 'comments'
     __table_args__ = {'schema': 'reddit'}
 
-    #!WONT WORK changed id -> comment_id drop database
-    comment_id = Column(Integer, primary_key=True)
+    comment_id = Column(String(255), primary_key=True)
     submission_id = Column(String(255), ForeignKey(
         'reddit.askReddit.submission_id'))
     author = Column(String(255))
     content = Column(Text)
     is_uploaded = Column(Boolean, default=False)
-    audio_file = Column(String(255), default=None)
 
     submission = relationship("AskReddit")
 
@@ -152,3 +156,10 @@ def make_connection():
 def make_session(engine):
     session = sessionmaker(bind=engine)
     return session()
+
+if __name__ == "__main__":
+    engine = make_connection()
+    session = make_session(engine)
+    AskReddit.add_submission(session, "123", "test")
+    # submission = AskReddit.get_submission(session, "10kzboh")
+    # comments = Comment.get_comments(session, submission.submission_id)
