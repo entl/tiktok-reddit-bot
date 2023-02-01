@@ -14,6 +14,14 @@ class SubmissionMixin(object):
         return session.query(cls).filter(cls.submission_id == submission_id).one()
 
     @classmethod
+    def get_not_uploaded_submission(cls, session):
+        return session.query(cls).filter(cls.is_uploaded == False).all()
+
+    @classmethod
+    def get_all_submissions(cls, session):
+        return session.query(cls).all()
+
+    @classmethod
     def set_uploaded(cls, session, submission_id: str):
         try:
             submission = session.query(cls).filter(
@@ -52,6 +60,10 @@ class CommentMixin(object):
     @classmethod
     def get_comments(cls, session, submission_id: str):
         return session.query(cls).filter(cls.submission_id == submission_id).all()
+
+    @classmethod
+    def get_not_uploaded_comments(cls, session):
+        return session.query(cls).filter(cls.is_uploaded == False).all()
 
     @classmethod
     def set_uploaded(cls, session, submission_id: str, id: int):
@@ -146,9 +158,9 @@ class Comment(Base, CommentMixin):
                     Title: {self.submission.title}>"""
 
 
-def make_connection():
+def make_connection(user, pwd, location, name):
     engine = create_engine(
-        f'mysql+mysqlconnector://{DATABASE_USER}:{DATABASE_PWD}@{DATABASE_LOCATION}/{DATABASE_NAME}')
+        f'mysql+mysqlconnector://{user}:{pwd}@{location}/{name}')
     Base.metadata.create_all(engine)
     return engine
 
