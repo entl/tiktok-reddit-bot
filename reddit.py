@@ -23,7 +23,7 @@ class Reddit:
             Reddit.cookies = self._get_cookies("cookies.json")
         self.submissions = None
 
-    def _login(self, client_id=CLIENT_ID, client_secret=CLIENT_SECRET, user_agent=USER_AGENT) -> reddit:
+    def _login(self, client_id, client_secret, user_agent) -> reddit:
         reddit = praw.Reddit(
             client_id=client_id,
             client_secret=client_secret,
@@ -40,6 +40,9 @@ class Reddit:
     def get_submissions(self, subreddit: str, limit: int = 5) -> list:
         # TODO: Check whether post already in database
         self.submissions = list(self.reddit_object.subreddit(subreddit).top(time_filter = "day", limit=limit))
+        for i, submission in enumerate(self.submissions):
+            if submission.over_18:
+                self.submissions.pop(i)
 
     @staticmethod
     def get_submission_id(submission):
@@ -80,7 +83,7 @@ class Reddit:
 
             print(submission.permalink)
             page.goto(f"https://www.reddit.com{submission.permalink}")
-            page.locator(f'[data-testid="post-container"]').screenshot(path=os.path.join(new_folder, f"title_{submission.id}.png"))
+            page.get_by_test_id("post-container").screenshot(path=os.path.join(new_folder, f"title_{submission.id}.png"))
 
             browser.close()
 
@@ -103,7 +106,7 @@ class Reddit:
             for comment in comments:
                 print(comment.permalink)
                 page.goto(f"https://www.reddit.com{comment.permalink}")
-                page.locator(f".t1_{comment.id}", has_text=comment.body[:20]).screenshot(path=os.path.join(new_folder, f"comment_{comment.id}.png"))
+                page.locator(f".t1_{comment.id}", has_text=comment.body.split(" ")[0]).screenshot(path=os.path.join(new_folder, f"comment_{comment.id}.png"))
 
             browser.close()
     
@@ -112,4 +115,3 @@ class Reddit:
         with open(file, "r") as cookie_file:
             cookies = json.load(cookie_file)
         return cookies
-
