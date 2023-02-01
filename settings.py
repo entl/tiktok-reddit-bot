@@ -33,3 +33,7 @@ DATABASE_USER = os.getenv('DATABASE_USER')
 DATABASE_PWD = os.getenv('DATABASE_PWD')
 DATABASE_LOCATION = os.getenv('DATABASE_LOCATION')
 DATABASE_NAME = os.getenv('DATABASE_NAME')
+
+#Final video dimensions
+WIDTH = 480
+HEIGHT = 854
