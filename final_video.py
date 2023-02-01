@@ -7,18 +7,18 @@ from database import AskReddit, Comment, make_connection, make_session
 from settings import GAMEPLAY_FOLDER, AUDIO_FOLDER_ASKREDDIT, SCREENSHOT_FOLDER_ASKREDDIT
 
 
-def create_video(submission, comments, audio_path: str, video_path: str, screenshot_path: str, width: int, height:  int,):
+def create_video(submission, comments, audio_path: str, gameplay_path: str, save_path: str, screenshot_path: str, width: int, height:  int,):
     audio_path = _create_folder(submission, path=audio_path)
     _synthesize(submission=submission, comments=comments, path=audio_path)
-    video_path, video_duration = _get_video_duration(path=video_path)
+    gameplay_path, video_duration = _get_video_duration(path=gameplay_path)
     audio, total_audio_duration = _get_audio_duration(audio_path)
-    clip = _create_subclip(video_path=video_path, video_duration=video_duration, audio_duration=total_audio_duration, width=width, height=height)
+    clip = _create_subclip(video_path=gameplay_path, video_duration=video_duration, audio_duration=total_audio_duration, width=width, height=height)
     audio_object = _add_sound(audios=audio, path=audio_path)
     screenshot_objects = _add_screenshots(submission=submission, audios=audio, path=screenshot_path, width=width)
     
     new_clip = CompositeVideoClip([clip, *screenshot_objects])
     new_clip = new_clip.set_audio(audio_object)
-    new_clip.write_videofile(filename = "test.mp4")
+    new_clip.write_videofile(filename = f"{os.path.join(save_path, submission.submission_id)}.mp4")
 
 
 def _add_screenshots(submission, audios, path: str, width:int, start: int = 1):
@@ -47,7 +47,7 @@ def _add_sound(audios, path:str, start: int = 1):
 def _create_subclip(video_path: str, video_duration: int,
                     audio_duration: int, width: int, height: int):
     start_time = random.randint(int(audio_duration), int(video_duration))-2*audio_duration
-    end_time = start_time+audio_duration
+    end_time = start_time+audio_duration+10
     clip = VideoFileClip(filename=video_path, audio=False)
     size = clip.size
     clip = clip.subclip(start_time, end_time)  # make random part
@@ -84,12 +84,10 @@ def _get_video_duration(path: str) -> tuple[str, int]:
 def _synthesize(submission, comments, path: str) -> str:
     syntesize(text=submission.title, path=path,
               filename=f"title_{submission.submission_id}.mp3")
-    print("Title syntesized")
-
+    
     for comment in comments:
         syntesize(text=comment.content, path=path,
                   filename=f"comment_{comment.comment_id}")
-        print("comment")
 
 
 def _create_folder(submission, path: str):
@@ -97,11 +95,3 @@ def _create_folder(submission, path: str):
     if not os.path.exists(new_folder):
         os.mkdir(new_folder)
     return new_folder
-
-if __name__ == "__main__":
-    engine = make_connection()
-    session = make_session(engine)
-    submission = AskReddit.get_submission(session, "10opflg")
-    comments = Comment.get_comments(session, submission.submission_id)
-
-    create_video(submission=submission, comments=comments, audio_path=AUDIO_FOLDER_ASKREDDIT, video_path=GAMEPLAY_FOLDER, screenshot_path=SCREENSHOT_FOLDER_ASKREDDIT, width=480, height=854)
