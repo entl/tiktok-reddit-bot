@@ -22,10 +22,11 @@ python main.py
 1. Not implemented creating video from subreddit TrueOffMyChest 
 2. Sometimes NSFW posts return an error
 3. If link is in submission, synthesize pronounce it
-4. No user input validation (in process)
-5. "final_video.py" needs refactoring (in process)
-6. To decrease number of arguements in functions they should be grouped (in process)
-7. Create meaningful comments (in process)
+4. Method "get_comments" in "reddit.py" fetches less comments than it asked (problem with PRAW and its behavior with MoreComments class)
+5. No user input validation (in process)
+6. "final_video.py" needs refactoring (in process)
+7. To decrease number of arguements in functions they should be grouped (in process)
+8. Create meaningful comments (in process)
 
 ## Contributing
 
