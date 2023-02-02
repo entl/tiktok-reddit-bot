@@ -40,9 +40,6 @@ class Reddit:
     def get_submissions(self, subreddit: str, limit: int = 5) -> list:
         # TODO: Check whether post already in database
         self.submissions = list(self.reddit_object.subreddit(subreddit).top(time_filter = "day", limit=limit))
-        for i, submission in enumerate(self.submissions):
-            if submission.over_18:
-                self.submissions.pop(i)
 
     @staticmethod
     def get_submission_id(submission):
@@ -80,10 +77,18 @@ class Reddit:
             new_folder = os.path.join(path, submission.id)
             if not os.path.exists(new_folder):
                 os.mkdir(os.path.join(path, submission.id))
+            if page.locator('[data-testid="content-gate"]').is_visible():
+            # This means the post is NSFW and requires to click the proceed button.
+                page.locator('[data-testid="content-gate"] button').click()
+                page.wait_for_load_state()  # Wait for page to fully load
+            if page.locator('[data-click-id="text"] button').is_visible():
+                page.locator(
+                    '[data-click-id="text"] button'
+                ).click()  # Remove "Click to see nsfw" Button in Screenshot
 
             print(submission.permalink)
             page.goto(f"https://www.reddit.com{submission.permalink}")
-            page.get_by_test_id("post-container").screenshot(path=os.path.join(new_folder, f"title_{submission.id}.png"))
+            page.locator('[data-test-id="post-content"]').screenshot(path=os.path.join(new_folder, f"title_{submission.id}.png"))
 
             browser.close()
 
@@ -106,7 +111,7 @@ class Reddit:
             for comment in comments:
                 print(comment.permalink)
                 page.goto(f"https://www.reddit.com{comment.permalink}")
-                page.locator(f".t1_{comment.id}", has_text=comment.body.split(" ")[0]).screenshot(path=os.path.join(new_folder, f"comment_{comment.id}.png"))
+                page.locator(f"#t1_{comment.id}").screenshot(path=os.path.join(new_folder, f"comment_{comment.id}.png"))
 
             browser.close()
     
