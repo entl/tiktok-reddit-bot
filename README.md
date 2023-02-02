@@ -15,8 +15,17 @@ pip install -r requirements.txt
 ## Usage
 
 ```python
-Will be added later
+python main.py
 ```
+
+## Known bugs and possible improvements
+1. Not implemented creating video from subreddit TrueOffMyChest 
+2. Sometimes NSFW posts return an error
+3. If link is in submission, synthesize pronounce it
+4. No user input validation (in process)
+5. "final_video.py" needs refactoring (in process)
+6. To decrease number of arguements in functions they should be grouped (in process)
+7. Create meaningful comments (in process)
 
 ## Contributing
 
